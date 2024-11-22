@@ -125,17 +125,31 @@
 
         // დავამატოთ მომხმარებლის სტატუსის შემოწმება
         function checkUserStatus() {
-            const uniqueCode = localStorage.getItem('uniqueCode');
-            if (uniqueCode) {
-                const userRef = ref(database, `activeUsers/${uniqueCode}`);
-                onValue(userRef, (snapshot) => {
-                    const userData = snapshot.val();
-                    if (userData && !userData.blocked) {
-                        // თუ მომხმარებელი აღარ არის დაბლოკილი, გადავამისამართოთ index.html-ზე
-                        window.location.href = 'index.html';
-                    }
-                });
-            }
+            const uniqueCode = localStorage.getItem('lastRequestCode');
+            if (!uniqueCode) return;
+
+            const userRef = ref(database, `activeUsers/${uniqueCode}`);
+            onValue(userRef, async (snapshot) => {
+                const userData = snapshot.val();
+                
+                // შევამოწმოთ shouldRedirect ფლაგი და დაბლოკვის სტატუსი
+                if (userData && !userData.blocked && userData.shouldRedirect) {
+                    // წავშალოთ redirect ფლაგი
+                    const updates = {};
+                    updates[`activeUsers/${uniqueCode}/shouldRedirect`] = false;
+                    await update(ref(database), updates);
+
+                    // გევინახოთ uniqueCode და სხვა საჭირო მონაცემები
+                    localStorage.setItem('uniqueCode', uniqueCode);
+                    localStorage.setItem('accessApproved', 'true');
+                    localStorage.setItem('remainingTime', '31536000');
+                    localStorage.setItem('lastUpdateTime', Date.now().toString());
+                    localStorage.setItem('siteStatus', 'counting');
+
+                    // გადავამისამართოთ index.html-ზე
+                    window.location.href = 'index.html';
+                }
+            });
         }
 
         // შევამოწმოთ სტატუსი გვერდის ჩატვირთვისას
