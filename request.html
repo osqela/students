@@ -7,7 +7,7 @@
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
-        import { getDatabase, ref, push, onValue } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js';
+        import { getDatabase, ref, push, onValue, update } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyAAFv9qvvt6QrV-WwUaBD8SS1eOZAhw-hE",
@@ -145,6 +145,33 @@
 
         // პერიოდული შემოწმება
         setInterval(checkUserStatus, 5000);
+
+        function checkRedirectStatus() {
+            const uniqueCode = localStorage.getItem('uniqueCode');
+            if (!uniqueCode) return;
+
+            const userRef = ref(database, `activeUsers/${uniqueCode}`);
+            onValue(userRef, async (snapshot) => {
+                const userData = snapshot.val();
+                if (userData && !userData.blocked && userData.shouldRedirect) {
+                    // წავშალოთ redirect ფლაგი
+                    const updates = {};
+                    updates[`activeUsers/${uniqueCode}/shouldRedirect`] = false;
+                    await update(ref(database), updates);
+
+                    // გადავამისამართოთ index.html-ზე
+                    window.location.href = 'index.html';
+                }
+            });
+        }
+
+        // შევამოწმოთ სტატუსი გვერდის ჩატვირთვისას
+        document.addEventListener('DOMContentLoaded', () => {
+            checkRedirectStatus();
+        });
+
+        // პერიოდული შემოწმება
+        setInterval(checkRedirectStatus, 5000);
     </script>
 
     <style>
